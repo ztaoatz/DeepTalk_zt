@@ -1,9 +1,14 @@
 // src/services/AIService.ts
 import { HuggingFaceService, type ConversationContext } from './HuggingFaceService'
+import { OpenRouterService } from './OpenRouterService'
+
+export type AIServiceProvider = 'openrouter' | 'huggingface';
 
 export class AIService {
   private aiSpeakingTimeout: number | null = null
   private huggingFaceService: HuggingFaceService
+  private openRouterService: OpenRouterService
+  private currentProvider: AIServiceProvider
   private isProcessing: boolean = false
   
   // 回调函数
@@ -12,15 +17,50 @@ export class AIService {
   onThinkingStateChange?: (isThinking: boolean) => void
   onErrorOccurred?: (error: string) => void
 
-  constructor() {
+  constructor(provider: AIServiceProvider = 'openrouter') {
     this.huggingFaceService = new HuggingFaceService()
+    this.openRouterService = new OpenRouterService()
+    this.currentProvider = provider
+    
+    // 如果首选provider没有配置API密钥，自动切换
+    if (provider === 'openrouter' && !this.openRouterService.isConfigured()) {
+      console.warn('OpenRouter not configured, falling back to HuggingFace')
+      this.currentProvider = 'huggingface'
+    } else if (provider === 'huggingface' && !this.huggingFaceService.isConfigured()) {
+      console.warn('HuggingFace not configured, trying OpenRouter')
+      this.currentProvider = 'openrouter'
+    }
+  }
+
+  /**
+   * 获取当前活动的AI服务
+   */
+  private getCurrentService(): HuggingFaceService | OpenRouterService {
+    return this.currentProvider === 'openrouter' 
+      ? this.openRouterService 
+      : this.huggingFaceService;
+  }
+
+  /**
+   * 切换AI服务提供商
+   */
+  switchProvider(provider: AIServiceProvider): void {
+    this.currentProvider = provider;
+    console.log(`Switched to ${provider} provider`);
+  }
+
+  /**
+   * 获取当前提供商
+   */
+  getCurrentProvider(): AIServiceProvider {
+    return this.currentProvider;
   }
 
   /**
    * 设置对话上下文（主题、难度等）
    */
   setConversationContext(context: Partial<ConversationContext>): void {
-    this.huggingFaceService.setConversationContext(context)
+    this.getCurrentService().setConversationContext(context)
   }
   /**
    * 基于用户语音文本生成AI回复
@@ -37,10 +77,10 @@ export class AIService {
       // 通知开始思考
       this.onThinkingStateChange?.(true)
       
-      console.log('Generating AI response for speech:', userSpeechText)
+      console.log(`Generating AI response using ${this.currentProvider}:`, userSpeechText)
       
-      // 调用Hugging Face API生成回复
-      const aiResponse = await this.huggingFaceService.generateResponse(userSpeechText)
+      // 调用当前AI服务生成回复
+      const aiResponse = await this.getCurrentService().generateResponse(userSpeechText)
       
       console.log('AI response generated:', aiResponse)
       
