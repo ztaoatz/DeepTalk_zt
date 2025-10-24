@@ -26,6 +26,10 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# API密钥和测试文件（包含敏感信息）
+test-openrouter-api.ps1
+frontend/public/test-openrouter.html
+
 # Logs
 logs/
 *.log
