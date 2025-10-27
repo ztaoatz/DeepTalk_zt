@@ -28,6 +28,7 @@ yarn-error.log*
 
 # API密钥和测试文件（包含敏感信息）
 test-openrouter-api.ps1
+quick-test-api.ps1
 frontend/public/test-openrouter.html
 
 # Logs
