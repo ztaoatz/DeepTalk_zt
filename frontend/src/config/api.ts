@@ -2,7 +2,7 @@
 // 本地开发环境使用 localhost，生产环境使用实际服务器地址
 export const API_BASE_URL = import.meta.env.PROD 
   ? 'https://115.175.45.173:8080' 
-  : 'http://localhost:8080'
+  : 'http://10.210.83.161:8080'
 
 // API 端点配置
 export const API_ENDPOINTS = {
