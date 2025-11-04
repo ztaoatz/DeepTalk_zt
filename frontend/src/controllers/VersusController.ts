@@ -136,12 +136,22 @@ export class VersusController {
     }
 
     this.aiService.onResponseGenerated = (response) => {
+      console.log('AI回复已生成，添加到对话历史:', response)
+      
+      // 立即添加到对话记录显示
       this.model.addTranscriptMessage({ 
         isUser: false, 
         text: response,
         timestamp: Date.now()
       })
       this.notifyStateChange()
+      
+      // 如果是AI辅助模式，使用TTS朗读
+      const state = this.model.getState()
+      if (state.matchType === 'AI辅助') {
+        console.log('开始TTS朗读AI回复')
+        this.ttsService.speak(response, 'en-US', 1.0, 1.0)
+      }
     }
 
     this.aiService.onErrorOccurred = (error) => {
@@ -457,15 +467,22 @@ export class VersusController {
     try {
       console.log('发送音频到语音识别服务...', audioBlob)
       
-      // 模拟语音识别
-      setTimeout(() => {
-        const simulatedText = "这是模拟的语音识别结果"
-        this.model.addTranscriptMessage({
-          isUser: true,
-          text: simulatedText
-        })
-        this.notifyStateChange()
-      }, 1000)
+      // 注意：
+      // 1. AI辅助模式：使用实时语音识别（Web Speech API），不需要这里处理
+      // 2. 真人对战模式：音频通过WebSocket发送给对方，不需要本地识别
+      // 
+      // 因此这个方法现在只是记录日志，不再添加模拟文本
+      
+      // 如果将来需要后端语音识别服务，可以在这里调用API
+      // const response = await fetch('/api/speech-to-text', {
+      //   method: 'POST',
+      //   body: audioBlob
+      // })
+      // const result = await response.json()
+      // this.model.addTranscriptMessage({
+      //   isUser: true,
+      //   text: result.text
+      // })
       
     } catch (error) {
       console.error('语音识别失败:', error)
@@ -632,13 +649,6 @@ export class VersusController {
   private async playNextAiResponse(): Promise<void> {
     console.log('AI开始思考并生成回复...')
     
-    // 设置AI正在思考状态
-    this.model.updateMatchState({ 
-      isPartnerThinking: true,
-      isPartnerSpeaking: false
-    })
-    this.notifyStateChange()
-    
     try {
       // 获取用户最后的发言
       const state = this.model.getState()
@@ -655,36 +665,8 @@ export class VersusController {
         language: 'en-US' // AI模式使用英语
       })
       
-      // 临时保存原有的回调
-      const originalOnResponseGenerated = this.aiService.onResponseGenerated
-      
-      // 设置一次性回调来处理AI响应
-      this.aiService.onResponseGenerated = (aiResponse: string) => {
-        console.log('AI回复:', aiResponse)
-        
-        // 添加到对话记录
-        this.model.addTranscriptMessage({
-          isUser: false,
-          text: aiResponse,
-          timestamp: Date.now()
-        })
-        this.notifyStateChange()
-        
-        // 思考完成，开始朗读
-        this.model.updateMatchState({ 
-          isPartnerThinking: false,
-          isPartnerSpeaking: true
-        })
-        this.notifyStateChange()
-        
-        // 使用TTS朗读AI回复（英语）
-        this.ttsService.speak(aiResponse, 'en-US', 1.0, 1.0)
-        
-        // 恢复原有回调
-        this.aiService.onResponseGenerated = originalOnResponseGenerated
-      }
-      
-      // 使用AIService生成回复（会自动使用OpenRouter）
+      // 使用AIService生成回复
+      // onResponseGenerated回调会自动处理显示和TTS
       await this.aiService.generateResponseFromSpeech(userText)
       
       // 增加响应计数

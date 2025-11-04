@@ -84,18 +84,14 @@ export class AIService {
       
       console.log('AI response generated:', aiResponse)
       
-      // 通知停止思考，开始说话
+      // 通知停止思考
       this.onThinkingStateChange?.(false)
-      this.onSpeakingStateChange?.(true)
       
-      // 模拟AI说话时间（基于文本长度）
-      const speakingDuration = Math.max(2000, Math.min(8000, aiResponse.length * 100))
+      // 立即显示AI回复文本（在TTS之前）
+      this.onResponseGenerated?.(aiResponse)
       
-      this.aiSpeakingTimeout = window.setTimeout(() => {
-        this.onSpeakingStateChange?.(false)
-        this.onResponseGenerated?.(aiResponse)
-        this.aiSpeakingTimeout = null
-      }, speakingDuration)
+      // 注意：不在这里管理speaking状态
+      // speaking状态由TTS服务的回调自动管理
 
     } catch (error) {
       console.error('Error generating AI response:', error)
@@ -111,27 +107,24 @@ export class AIService {
   }
 
   /**
-   * 生成备用回复（当API失败时）
+   * 生成备用回复（当API真的失败时）
+   * 注意：这个方法现在几乎不会被调用，因为OpenRouterService已经有自己的备用回复
    */
   private generateFallbackResponse(): void {
+    console.warn('⚠️ AIService: 生成备用回复（这不应该经常发生）')
+    
     const fallbackResponses = [
-      "That's a very interesting perspective. Could you tell me more about your experience with this?",
-      "I understand your point. Have you considered the alternative viewpoint?",
-      "That's a great example. How do you think this applies in different situations?",
-      "Very thoughtful response. What do you think are the main challenges in this area?",
-      "I see what you mean. How has this changed over the years in your opinion?"
+      "I apologize, but I'm having trouble generating a response right now. Could you please try again?",
+      "Sorry, I'm experiencing some technical difficulties. Please rephrase your question.",
+      "I'm having connection issues at the moment. Could you repeat that?",
+      "Pardon me, but I need a moment to reconnect. Please try again.",
+      "I apologize for the interruption. Could you please say that again?"
     ]
     
     const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)]
     
-    setTimeout(() => {
-      this.onSpeakingStateChange?.(true)
-      
-      setTimeout(() => {
-        this.onSpeakingStateChange?.(false)
-        this.onResponseGenerated?.(randomResponse)
-      }, 3000)
-    }, 1000)
+    // 立即显示备用回复（不延迟，因为这是真正的错误）
+    this.onResponseGenerated?.(randomResponse)
   }
 
   /**
@@ -141,35 +134,23 @@ export class AIService {
     this.stopSpeaking()
     
     setTimeout(() => {
-      if (this.onSpeakingStateChange) {
-        this.onSpeakingStateChange(true)
+      // 生成AI回复
+      const aiResponses = [
+        "That's a very interesting perspective. Could you tell me more about your experience with this?",
+        "I understand your point. Have you considered the alternative viewpoint?",
+        "That's a great example. How do you think this applies in different situations?",
+        "Very thoughtful response. What do you think are the main challenges in this area?",
+        "I see what you mean. How has this changed over the years in your opinion?"
+      ]
+      
+      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)]
+      
+      // 立即显示回复文本
+      if (this.onResponseGenerated) {
+        this.onResponseGenerated(randomResponse)
       }
       
-      // 模拟AI发言时长（随机5-15秒）
-      const speakingDuration = Math.random() * 10000 + 5000
-      
-      this.aiSpeakingTimeout = window.setTimeout(() => {
-        if (this.onSpeakingStateChange) {
-          this.onSpeakingStateChange(false)
-        }
-        
-        // 生成AI回复
-        const aiResponses = [
-          "That's a very interesting perspective. Could you tell me more about your experience with this?",
-          "I understand your point. Have you considered the alternative viewpoint?",
-          "That's a great example. How do you think this applies in different situations?",
-          "Very thoughtful response. What do you think are the main challenges in this area?",
-          "I see what you mean. How has this changed over the years in your opinion?"
-        ]
-        
-        const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)]
-        
-        if (this.onResponseGenerated) {
-          this.onResponseGenerated(randomResponse)
-        }
-        
-        this.aiSpeakingTimeout = null
-      }, speakingDuration)
+      // TTS将由Controller的回调自动处理
     }, 1000)
   }
 

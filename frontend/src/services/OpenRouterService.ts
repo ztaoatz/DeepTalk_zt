@@ -137,20 +137,22 @@ export class OpenRouterService {
       const messages = this.conversationContext.messages.map(msg => ({
         role: msg.role,
         content: msg.content
-      }));
-
-      console.log('Sending request to OpenRouter:', {
+      }));      console.log('Sending request to OpenRouter:', {
         model: this.config.model,
         messageCount: messages.length
       });
+
+      // 创建一个带超时的 fetch 请求（30秒超时）
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
 
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.config.apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin, // 可选：用于统计
-          'X-Title': 'DeepTalk' // 可选：应用名称
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'DeepTalk'
         },
         body: JSON.stringify({
           model: this.config.model,
@@ -160,8 +162,11 @@ export class OpenRouterService {
           top_p: 1,
           frequency_penalty: 0,
           presence_penalty: 0
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -196,13 +201,21 @@ export class OpenRouterService {
         ];
       }
 
-      return aiResponse;
-
-    } catch (error) {
-      console.error('OpenRouter API error:', error);
+      return aiResponse;    } catch (error) {
+      // 详细的错误日志
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error('❌ OpenRouter API 请求超时（30秒）');
+        } else {
+          console.error('❌ OpenRouter API 错误:', error.message, error);
+        }
+      } else {
+        console.error('❌ OpenRouter API 未知错误:', error);
+      }
       
       // 返回备用回复
       const fallbackResponse = this.generateContextualFallbackResponse(userMessage);
+      console.warn('⚠️ 使用备用回复:', fallbackResponse);
       
       // 添加到上下文（避免重复添加用户消息）
       this.conversationContext.messages.push({
