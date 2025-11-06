@@ -30,11 +30,9 @@ export class OpenRouterService {
       } catch {
         return '';
       }
-    };
-
-    this.config = {
+    };    this.config = {
       apiKey: config.apiKey || getEnvVar('VITE_OPENROUTER_API_KEY'),
-      model: config.model || 'alibaba/tongyi-deepresearch-30b-a3b:free',
+      model: config.model || 'qwen/qwen2.5-vl-32b-instruct:free',
       maxTokens: config.maxTokens || 500,
       temperature: config.temperature || 0.7,
       ...config

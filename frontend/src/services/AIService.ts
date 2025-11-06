@@ -1,13 +1,13 @@
 // src/services/AIService.ts
 import { HuggingFaceService, type ConversationContext } from './HuggingFaceService'
-import { OpenRouterService } from './OpenRouterService'
+import { GeminiService } from './GeminiService'
 
-export type AIServiceProvider = 'openrouter' | 'huggingface';
+export type AIServiceProvider = 'gemini' | 'huggingface';
 
 export class AIService {
   private aiSpeakingTimeout: number | null = null
   private huggingFaceService: HuggingFaceService
-  private openRouterService: OpenRouterService
+  private geminiService: GeminiService
   private currentProvider: AIServiceProvider
   private isProcessing: boolean = false
   
@@ -17,27 +17,35 @@ export class AIService {
   onThinkingStateChange?: (isThinking: boolean) => void
   onErrorOccurred?: (error: string) => void
 
-  constructor(provider: AIServiceProvider = 'openrouter') {
+  constructor(provider: AIServiceProvider = 'gemini') {
     this.huggingFaceService = new HuggingFaceService()
-    this.openRouterService = new OpenRouterService()
+    this.geminiService = new GeminiService()
     this.currentProvider = provider
     
     // 如果首选provider没有配置API密钥，自动切换
-    if (provider === 'openrouter' && !this.openRouterService.isConfigured()) {
-      console.warn('OpenRouter not configured, falling back to HuggingFace')
+    if (provider === 'gemini' && !this.isGeminiConfigured()) {
+      console.warn('Gemini not configured, falling back to HuggingFace')
       this.currentProvider = 'huggingface'
     } else if (provider === 'huggingface' && !this.huggingFaceService.isConfigured()) {
-      console.warn('HuggingFace not configured, trying OpenRouter')
-      this.currentProvider = 'openrouter'
+      console.warn('HuggingFace not configured, trying Gemini')
+      this.currentProvider = 'gemini'
     }
+  }
+
+  /**
+   * 检查Gemini是否配置
+   */
+  private isGeminiConfigured(): boolean {
+    // Gemini始终配置了默认API密钥
+    return true;
   }
 
   /**
    * 获取当前活动的AI服务
    */
-  private getCurrentService(): HuggingFaceService | OpenRouterService {
-    return this.currentProvider === 'openrouter' 
-      ? this.openRouterService 
+  private getCurrentService(): HuggingFaceService | GeminiService {
+    return this.currentProvider === 'gemini' 
+      ? this.geminiService 
       : this.huggingFaceService;
   }
 
@@ -108,7 +116,7 @@ export class AIService {
 
   /**
    * 生成备用回复（当API真的失败时）
-   * 注意：这个方法现在几乎不会被调用，因为OpenRouterService已经有自己的备用回复
+   * 注意：这个方法现在几乎不会被调用，因为GeminiService已经有自己的备用回复
    */
   private generateFallbackResponse(): void {
     console.warn('⚠️ AIService: 生成备用回复（这不应该经常发生）')
