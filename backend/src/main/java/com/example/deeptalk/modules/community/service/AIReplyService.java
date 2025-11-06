@@ -14,7 +14,7 @@ import java.util.ArrayList;
 @Service
 public class AIReplyService {
     
-    @Value("${gemini.api.key}")
+    @Value("${gemini.api.key:}")  // 添加空字符串作为默认值
     private String apiKey;
     
     @Value("${gemini.api.url:https://zjxx.lol/v1beta/models/gemini-2.5-flash:generateContent}")
